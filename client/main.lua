@@ -13,6 +13,7 @@ local CurrentGlovebox = nil
 local CurrentStash = nil
 local isCrafting = false
 local isHotbar = false
+local WeaponAttachments = {}
 
 --#endregion Variables
 
@@ -120,8 +121,8 @@ local function FormatWeaponAttachments(itemdata)
     itemdata.name = itemdata.name:upper()
     if itemdata.info.attachments ~= nil and next(itemdata.info.attachments) ~= nil then
         for _, v in pairs(itemdata.info.attachments) do
-            if exports['qb-weapons']:getConfigWeaponAttachments(itemdata.name) then
-                for key, value in pairs(exports['qb-weapons']:getConfigWeaponAttachments(itemdata.name)) do
+            if WeaponAttachments[itemdata.name] ~= nil then
+                for key, value in pairs(WeaponAttachments[itemdata.name]) do
                     if value.component == v.component then
                         local item = value.item
                         attachments[#attachments+1] = {
@@ -548,20 +549,17 @@ RegisterNetEvent('inventory:client:UseWeapon', function(weaponData, shootbool)
     local weaponName = tostring(weaponData.name)
     local weaponHash = joaat(weaponData.name)
     if currentWeapon == weaponName then
-        TriggerEvent('weapons:client:DrawWeapon', nil)
         SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true)
         RemoveAllPedWeapons(ped, true)
         TriggerEvent('weapons:client:SetCurrentWeapon', nil, shootbool)
         currentWeapon = nil
     elseif weaponName == "weapon_stickybomb" or weaponName == "weapon_pipebomb" or weaponName == "weapon_smokegrenade" or weaponName == "weapon_flare" or weaponName == "weapon_proxmine" or weaponName == "weapon_ball"  or weaponName == "weapon_molotov" or weaponName == "weapon_grenade" or weaponName == "weapon_bzgas" then
-        TriggerEvent('weapons:client:DrawWeapon', weaponName)
         GiveWeaponToPed(ped, weaponHash, 1, false, false)
         SetPedAmmo(ped, weaponHash, 1)
         SetCurrentPedWeapon(ped, weaponHash, true)
         TriggerEvent('weapons:client:SetCurrentWeapon', weaponData, shootbool)
         currentWeapon = weaponName
     elseif weaponName == "weapon_snowball" then
-        TriggerEvent('weapons:client:DrawWeapon', weaponName)
         GiveWeaponToPed(ped, weaponHash, 10, false, false)
         SetPedAmmo(ped, weaponHash, 10)
         SetCurrentPedWeapon(ped, weaponHash, true)
@@ -569,14 +567,15 @@ RegisterNetEvent('inventory:client:UseWeapon', function(weaponData, shootbool)
         TriggerEvent('weapons:client:SetCurrentWeapon', weaponData, shootbool)
         currentWeapon = weaponName
     else
-        TriggerEvent('weapons:client:DrawWeapon', weaponName)
         TriggerEvent('weapons:client:SetCurrentWeapon', weaponData, shootbool)
         local ammo = tonumber(weaponData.info.ammo) or 0
 
-        if weaponName == "weapon_petrolcan" or weaponName == "weapon_fireextinguisher" then
+        -- if weaponName == "weapon_petrolcan" or weaponName == "weapon_fireextinguisher" then
+        --     ammo = 4500
+        -- end
+        if weaponName == "weapon_fireextinguisher" then
             ammo = 4000
         end
-
         GiveWeaponToPed(ped, weaponHash, ammo, false, false)
         SetPedAmmo(ped, weaponHash, ammo)
         SetCurrentPedWeapon(ped, weaponHash, true)
@@ -663,7 +662,6 @@ RegisterCommand('closeinv', function()
 end, false)
 
 RegisterCommand('inventory', function()
-    if IsNuiFocused() then return end
     if not isCrafting and not inInventory then
         if not PlayerData.metadata["isdead"] and not PlayerData.metadata["inlaststand"] and not PlayerData.metadata["ishandcuffed"] and not IsPauseMenuActive() then
             local ped = PlayerPedId()
@@ -707,52 +705,61 @@ RegisterCommand('inventory', function()
                 local maxweight
                 local slots
                 if vehicleClass == 0 then
-                    maxweight = 38000
+                    maxweight = 100
                     slots = 30
                 elseif vehicleClass == 1 then
-                    maxweight = 50000
+                    maxweight = 100
                     slots = 40
                 elseif vehicleClass == 2 then
-                    maxweight = 75000
+                    maxweight = 150
                     slots = 50
                 elseif vehicleClass == 3 then
-                    maxweight = 42000
+                    maxweight = 80
                     slots = 35
                 elseif vehicleClass == 4 then
-                    maxweight = 38000
+                    maxweight = 250
                     slots = 30
                 elseif vehicleClass == 5 then
-                    maxweight = 30000
+                    maxweight = 100
                     slots = 25
                 elseif vehicleClass == 6 then
-                    maxweight = 30000
+                    maxweight = 100
                     slots = 25
                 elseif vehicleClass == 7 then
-                    maxweight = 30000
+                    maxweight = 100
                     slots = 25
                 elseif vehicleClass == 8 then
-                    maxweight = 15000
-                    slots = 15
+                    maxweight = 15
+                    slots = 5
                 elseif vehicleClass == 9 then
-                    maxweight = 60000
+                    maxweight = 200
+                    slots = 35
+                elseif vehicleClass == 10 then
+                    maxweight = 250
+                    slots = 35
+                elseif vehicleClass == 11 then
+                    maxweight = 250
                     slots = 35
                 elseif vehicleClass == 12 then
-                    maxweight = 120000
+                    maxweight = 300
                     slots = 35
                 elseif vehicleClass == 13 then
                     maxweight = 0
                     slots = 0
                 elseif vehicleClass == 14 then
-                    maxweight = 120000
+                    maxweight = 200
                     slots = 50
                 elseif vehicleClass == 15 then
-                    maxweight = 120000
+                    maxweight = 200
                     slots = 50
                 elseif vehicleClass == 16 then
-                    maxweight = 120000
+                    maxweight = 200
+                    slots = 50
+                elseif vehicleClass == 20 then
+                    maxweight = 500
                     slots = 50
                 else
-                    maxweight = 60000
+                    maxweight = 200
                     slots = 35
                 end
                 local other = {
@@ -792,7 +799,7 @@ RegisterKeyMapping('hotbar', Lang:t("inf_mapping.tog_slots"), 'keyboard', 'z')
 
 for i = 1, 6 do
     RegisterCommand('slot' .. i,function()
-        if not PlayerData.metadata["isdead"] and not PlayerData.metadata["inlaststand"] and not PlayerData.metadata["ishandcuffed"] and not IsPauseMenuActive() and not LocalPlayer.state.inv_busy then
+        if not PlayerData.metadata["isdead"] and not PlayerData.metadata["inlaststand"] and not PlayerData.metadata["ishandcuffed"] and not IsPauseMenuActive() then
             if i == 6 then
                 i = Config.MaxInventorySlots
             end
@@ -827,13 +834,13 @@ end)
 RegisterNUICallback('RemoveAttachment', function(data, cb)
     local ped = PlayerPedId()
     local WeaponData = QBCore.Shared.Items[data.WeaponData.name]
-    local Attachment = exports['qb-weapons']:getConfigWeaponAttachments(WeaponData.name:upper())[data.AttachmentData.attachment]
+    local Attachment = WeaponAttachments[WeaponData.name:upper()][data.AttachmentData.attachment]
     QBCore.Functions.TriggerCallback('weapons:server:RemoveAttachment', function(NewAttachments)
         if NewAttachments ~= false then
             local Attachies = {}
             RemoveWeaponComponentFromPed(ped, joaat(data.WeaponData.name), joaat(Attachment.component))
             for _, v in pairs(NewAttachments) do
-                for _, pew in pairs(exports['qb-weapons']:getConfigWeaponAttachments(WeaponData.name:upper())) do
+                for _, pew in pairs(WeaponAttachments[WeaponData.name:upper()]) do
                     if v.component == pew.component then
                         local item = pew.item
                         Attachies[#Attachies+1] = {
